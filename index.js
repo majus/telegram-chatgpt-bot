@@ -56,46 +56,48 @@ bot.on(message("text"), async (ctx) => {
   }
 });
 
-bot.on(message("voice"), async (ctx) => {
-  ctx.session ??= INITIAL_SESSION;
-  const { voice } = ctx.message;
-  await ctx.sendChatAction("record_voice");
-  try {
-    const voiceLink = await ctx.telegram.getFileLink(voice.file_id);
-    const oggPath = await ogg.create(
-      voiceLink.href,
-      String(ctx.message.from.id)
-    );
-    const mp3Path = await ogg.toMp3(oggPath, ctx.message.from.id);
-
-    const userMessageText = await openai.transcription(mp3Path);
-    ctx.session.messages.push({
-      role: openai.roles.USER,
-      content: String(userMessageText),
-    });
-
-    const response = await openai.chat(ctx.session.messages);
-    const assistantMessageText = response.content;
-
-    ctx.session.messages.push({
-      role: openai.roles.ASSISTANT,
-      content: String(assistantMessageText),
-    });
-
+if (process.env.VOICE_API) {
+  bot.on(message("voice"), async (ctx) => {
+    ctx.session ??= INITIAL_SESSION;
+    const { voice } = ctx.message;
     await ctx.sendChatAction("record_voice");
-    // if you have installed docker, you can use this code for voice message
-    // it doesn't support persian language
-    const voiceResponse = await fetch(
-      `${process.env.VOICE_API}/api/tts?text=${assistantMessageText}&speaker_id=p225&style_wav=&language_id=` // you can change speaker_id to change voice
-    );
-    const voiceResponseJson = await voiceResponse.arrayBuffer();
-    await ctx.sendChatAction("record_voice");
-    const voiceResponseBuffer = Buffer.from(voiceResponseJson);
-    await ctx.replyWithVoice({ source: Buffer.from(voiceResponseBuffer) });
-  } catch (e) {
-    console.log("Error while voice message", e.message);
-  }
-});
+    try {
+      const voiceLink = await ctx.telegram.getFileLink(voice.file_id);
+      const oggPath = await ogg.create(
+        voiceLink.href,
+        String(ctx.message.from.id)
+      );
+      const mp3Path = await ogg.toMp3(oggPath, ctx.message.from.id);
+
+      const userMessageText = await openai.transcription(mp3Path);
+      ctx.session.messages.push({
+        role: openai.roles.USER,
+        content: String(userMessageText),
+      });
+
+      const response = await openai.chat(ctx.session.messages);
+      const assistantMessageText = response.content;
+
+      ctx.session.messages.push({
+        role: openai.roles.ASSISTANT,
+        content: String(assistantMessageText),
+      });
+
+      await ctx.sendChatAction("record_voice");
+      // if you have installed docker, you can use this code for voice message
+      // it doesn't support persian language
+      const voiceResponse = await fetch(
+        `${process.env.VOICE_API}/api/tts?text=${assistantMessageText}&speaker_id=p225&style_wav=&language_id=` // you can change speaker_id to change voice
+      );
+      const voiceResponseJson = await voiceResponse.arrayBuffer();
+      await ctx.sendChatAction("record_voice");
+      const voiceResponseBuffer = Buffer.from(voiceResponseJson);
+      await ctx.replyWithVoice({ source: Buffer.from(voiceResponseBuffer) });
+    } catch (e) {
+      console.log("Error while voice message", e.message);
+    }
+  });
+}
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
