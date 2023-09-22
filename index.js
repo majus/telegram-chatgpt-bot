@@ -18,7 +18,7 @@ bot.launch();
 
 bot.command("start", async (ctx) => {
   ctx.session === INITIAL_SESSION;
-  await ctx.reply("سوال خود را بصورت متنی بپرسید یا از پیام استفاده کنید...");
+  await ctx.reply("Ask your question in text or use message…");
 });
 
 bot.on(message("text"), async (ctx) => {
